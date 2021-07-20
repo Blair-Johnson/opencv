@@ -9,7 +9,7 @@ namespace gapi {
 namespace core {
 namespace sycl {
 
-  GAPI_EXPORTS_W cv::gapi::GKernelPackage kernels();
+GAPI_EXPORTS_W cv::gapi::GKernelPackage kernels();
 
 } // namespace sycl
 } // namespace core

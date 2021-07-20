@@ -11,8 +11,6 @@
 #include <opencv2/gapi/gkernel.hpp>
 #include <opencv2/gapi/garg.hpp>
 
-// FIXME: These are not included with OpenCV by default
-// This is protected by HAVE_SYCL in gsyclbackend.hpp, is this included anywhere else?
 #include <CL/sycl.hpp>
 #include <CL/sycl/backend/opencl.hpp> 
 
@@ -77,8 +75,8 @@ namespace cv {
     protected:
         // SYCL specific values
         // TODO: Determine when these get assigned
-        sycl::queue m_queue;
-        sycl::context m_context;
+        sycl::queue& m_queue;
+        sycl::context& m_context;
 
         void initSYCLContext();
 

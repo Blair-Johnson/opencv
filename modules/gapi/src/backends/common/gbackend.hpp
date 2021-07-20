@@ -19,10 +19,6 @@
 
 #include "compiler/gmodel.hpp"
 
-#ifdef HAVE_SYCL
-#include <CL/sycl.hpp>
-#endif // HAVE_SYCL
-
 namespace cv {
 namespace gimpl {
 
@@ -149,9 +145,6 @@ using Mag = magazine::Class< cv::Mat
 #if !defined(GAPI_STANDALONE)
                            , cv::UMat
 #endif
-#ifdef HAVE_SYCL //FIXME: Issues with sycl buffers being templated?
-                           , sycl::buffer<uint8_t, 2>
-#endif // HAVE_SYCL
                            >;
 
 namespace magazine
