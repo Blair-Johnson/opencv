@@ -209,6 +209,11 @@ endif()
 
 if(HAVE_SYCL)
   target_compile_options(${the_module} PRIVATE ${SYCL_FLAGS} -fsycl-unnamed-lambda)
+  ocv_target_compile_definitions(${the_module} PRIVATE -DHAVE_SYCL)
+  if(TARGET opencv_test_gapi)
+    target_compile_options(opencv_test_api PRIVATE ${SYCL_FLAGS} -fsycl-unnamed-lambda)
+    ocv_target_compile_definitions(opencv_test_gapi PRIVATE -DHAVE_SYCL)
+  endif()
   target_link_options(${the_module} PRIVATE ${SYCL_FLAGS})
   ocv_target_link_libraries(${the_module} PRIVATE ${SYCL_LIBRARY})
 endif()
@@ -256,7 +261,6 @@ if(HAVE_PLAIDML)
   ocv_target_link_libraries(${the_module} PRIVATE ${PLAIDML_LIBRARIES})
   ocv_target_include_directories(${the_module} SYSTEM PRIVATE ${PLAIDML_INCLUDE_DIRS})
 endif()
-
 
 if(WIN32)
   # Required for htonl/ntohl on Windows

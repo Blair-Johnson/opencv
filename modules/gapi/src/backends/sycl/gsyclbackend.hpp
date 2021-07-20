@@ -46,12 +46,18 @@ class GSYCLExecutable final: public GIslandExecutable
     GArg packArg(const GArg& arg);
 
 public:
+    GSYCLExecutable(const ade::Graph  &graph,
+                    const std::vector<ade::NodeHandle> &nodes);
 
-  GSYCLExecutable(const ade::Graph  &graph,
-                  const std::vector<ade::NodeHandle> &nodes);
+    // FIXME: Can this be made reshapable?
+    virtual inline bool canReshape() const override { return false; }
+    inline void reshape(ade::Graph&, const GCompileArgs&) override
+    {
+        util::throw_error(std::logic_error("GSYCLExecutable::reshape() should never be called"));
+    }
 
-  virtual void run(std::vector<InObj> &&input_objs,
-                   std::vector<OutObj> &&ouput_objs) override;
+    virtual void run(std::vector<InObj> &&input_objs,
+                     std::vector<OutObj> &&ouput_objs) override;
 };
 }}
 

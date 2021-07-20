@@ -33,7 +33,7 @@ using GConstGSYCLModel = ade::ConstTypedGraph
 
 namespace
 {
-  class GSYCLBackendImpl final: public cv::gapi::Gbackend::Priv
+  class GSYCLBackendImpl final: public cv::gapi::GBackend::Priv
   {
     virtual void unpackKernel(ade::Graph  &graph,
                               const ade::NodeHandle &op_node,
@@ -46,9 +46,7 @@ namespace
 
     virtual EPtr compile(const ade::Graph &graph,
                          const cv::GCompileArgs &,
-                         const std::vector<ade::NodeHandle> &nodes,
-                         const std::vector<cv::gimpl::Data>& ins_data,
-                         const std::vector<cv::gimpl::Data>& outs_data) const override
+                         const std::vector<ade::NodeHandle> &nodes) const override
     {
       return EPtr{new cv::gimpl::GSYCLExecutable(graph, nodes)};
     }
@@ -146,7 +144,7 @@ void cv::gimpl::GSYCLExecutable::run(std::vector<InObj>&& input_objs,
         //        type and dimension matching automatically
         auto& mag_buffer = m_res.template slot<sycl::buffer<uint8_t, 2>>()[rc.id];
         auto& mag_mat = m_res.template slot<cv::Mat>()[rc.id];
-        CV_CheckTypeEQ(mag_mat.type(), CV_8UC1, "Only single channel UInt8 Mats " <<
+        CV_CheckTypeEQ(mag_mat.type(), CV_8UC1, "Only single channel UInt8 Mats "
                                     "are currently supported by SYCL");
         mag_buffer(mag_mat.data, range<2>(mag_mat.rows, mag_mat.cols));
     };
@@ -255,7 +253,7 @@ void cv::gimpl::GSYCLExecutable::run(std::vector<InObj>&& input_objs,
             //GAPI_Assert((out_arg_data == (mag_mat.getMat(ACCESS_RW).data)) &&
             //    " data for output parameters was reallocated ?");
             auto& mag_buffer = m_res.template slot<sycl::buffer<uint8_t, 2>>().at(rc.id);
-            
+
         }
     }
 
