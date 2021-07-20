@@ -151,7 +151,7 @@ void cv::gimpl::GSYCLExecutable::run(std::vector<InObj>&& input_objs,
 
     for (auto& it : input_objs) {
         const auto& rc = it.first;
-        magazine::bindInArg(m_res, rc, it.second);
+        magazine::bindInArg(m_res, rc, it.second, HandleRMat::SKIP);
         // There is already a cv::Mat in the magazine after bindInArg call,
         // extract buffer from it and put into magazine
         if (rc.shape == GShape::GMAT) bindBuffer(rc);
