@@ -45,7 +45,7 @@ GAPI_EXPORTS cv::gapi::GBackend backend();
 class GAPI_EXPORTS GSYCLContext
 {
 public:
-    GSYCLContext();
+    GSYCLContext(sycl::queue&);
 
     sycl::queue& getQueue();
 

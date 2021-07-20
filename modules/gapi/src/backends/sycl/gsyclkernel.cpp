@@ -2,35 +2,10 @@
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/gapi/sycl/gsyclkernel.hpp>
 
-cv::GSYCLContext::GSYCLContext()
+cv::GSYCLContext::GSYCLContext(sycl::queue& sycl_queue)
+    m_queue(sycl_queue)
 {
-    initSYCLContext();
-}
-
-// FIXME: Currently using existing OpenCL interoperability with UMats
-//        instead of pure SYCL
-// FIXME: Add options for controlling device selection
-void cv::GSYCLContext::initSYCLContext()
-{
-    cl::sycl::default_selector def_selector;
-    m_queue = cl::sycl::queue(def_selector);
     m_context = m_queue.get_context();
-
-    // bind opencl context, device, queue from SYCL to opencv
-    auto device = m_queue.get_device();
-    auto platform = device.get_platform();
-
-    try
-    {
-        auto ctx = cv::ocl::OpenCLExecutionContext::create(
-            platform.get_info<sycl::info::platform::name>(), platform.get(),
-            m_context.get(), device.get());
-        ctx.bind();
-    }
-    catch (const cv::Exception& exception)
-    {
-        std::cerr << "OpenCV: Can't bind SYCL OpenCL context/device/queue: " << exception.what() << std::endl;
-    }
 }
 
 sycl::queue& cv::GSYCLContext::getQueue()
