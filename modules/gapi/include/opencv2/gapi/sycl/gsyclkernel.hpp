@@ -46,7 +46,7 @@ class context;
 class GAPI_EXPORTS GSYCLContext
 {
 public:
-    GSYCLContext();
+    GSYCLContext(sycl::queue&);
 
     queue& getQueue();
 

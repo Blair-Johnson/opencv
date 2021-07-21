@@ -127,6 +127,32 @@ cv::GArg cv::gimpl::GSYCLExecutable::packArg(const GArg& arg)
     }
 }
 
+// FIXME: Currently using existing OpenCL interoperability with UMats
+//        instead of pure SYCL
+// FIXME: Add options for controlling device selection
+void cv::gimpl::GSYCLEcecutable::initSYCLContext()
+{
+    cl::sycl::default_selector def_selector;
+    m_queue = cl::sycl::queue(def_selector);
+    context = m_queue.get_context();
+
+    // bind opencl context, device, queue from SYCL to opencv
+    auto device = m_queue.get_device();
+    auto platform = device.get_platform();
+
+    try
+    {
+        auto ctx = cv::ocl::OpenCLExecutionContext::create(
+            platform.get_info<sycl::info::platform::name>(), platform.get(),
+            context.get(), device.get());
+        ctx.bind();
+    }
+    catch (const cv::Exception& exception)
+    {
+        std::cerr << "OpenCV: Can't bind SYCL OpenCL context/device/queue: " << exception.what() << std::endl;
+    }
+}
+
 void cv::gimpl::GSYCLExecutable::run(std::vector<InObj>&& input_objs,
                                      std::vector<OutObj>&& output_objs)
 {
@@ -191,7 +217,7 @@ void cv::gimpl::GSYCLExecutable::run(std::vector<InObj>&& input_objs,
 
         // Initialize kernel's execution context:
         // - Input parameters
-        GSYCLContext context;
+        GSYCLContext context(m_queue);
         context.m_args.reserve(op.args.size());
 
         using namespace std::placeholders;
