@@ -11,9 +11,6 @@
 #include <opencv2/gapi/gkernel.hpp>
 #include <opencv2/gapi/garg.hpp>
 
-#include <CL/sycl.hpp>
-#include <CL/sycl/backend/opencl.hpp> 
-
 // FIXME: namespace scheme for backends?
 namespace cv {
 namespace gimpl {
@@ -35,6 +32,10 @@ namespace sycl
 * @sa gapi_std_backends
 */
 GAPI_EXPORTS cv::gapi::GBackend backend();
+
+template <typename T, typename U> class buffer;
+class queue;
+class context;
 /** @} */
 } // namespace sycl
 } // namespace gapi
@@ -47,15 +48,15 @@ class GAPI_EXPORTS GSYCLContext
 public:
     GSYCLContext();
 
-    sycl::queue& getQueue();
+    queue& getQueue();
 
     // Generic accessor API
     template<typename T>
     const T& inArg(int input) { return m_args.at(input).get<T>(); }
 
     // Syntax sugar
-    const sycl::buffer<uint8_t, 2>& inMat(int input);
-    sycl::buffer<uint8_t, 2>& outMatR(int output);
+    const buffer<uint8_t, 2>& inMat(int input);
+    buffer<uint8_t, 2>& outMatR(int output);
 
     const cv::Scalar& inVal(int input);
     cv::Scalar& outValR(int output); // FIXME: Avoid cv::Scalar s = stx.outValR()
@@ -71,8 +72,8 @@ public:
 protected:
     // SYCL specific values
     // TODO: Determine when these get assigned
-    sycl::queue& m_queue;
-    sycl::context& m_context;
+    queue& m_queue;
+    context& m_context;
 
     void initSYCLContext();
 
@@ -107,7 +108,7 @@ namespace detail
     template<class T> struct sycl_get_in;
     template<> struct sycl_get_in<cv::GMat>
     {
-        static const sycl::buffer<uint8_t, 2> get(GSYCLContext& ctx, int idx)
+        static const buffer<uint8_t, 2> get(GSYCLContext& ctx, int idx)
         {
              return ctx.inMat(idx);
         }
@@ -121,7 +122,7 @@ namespace detail
     template<class T> struct sycl_get_out;
     template<> struct sycl_get_out<cv::GMat>
     {
-        static const sycl::buffer<uint8_t, 2> get(GSYCLContext& ctx, int idx)
+        static const buffer<uint8_t, 2> get(GSYCLContext& ctx, int idx)
         {
             return ctx.outMatR(idx);
         }
