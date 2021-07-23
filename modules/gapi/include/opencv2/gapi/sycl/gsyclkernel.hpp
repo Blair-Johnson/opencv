@@ -11,6 +11,15 @@
 #include <opencv2/gapi/gkernel.hpp>
 #include <opencv2/gapi/garg.hpp>
 
+inline namespace cl {
+namespace sycl {
+
+template <typename T, int Dimensions, typename AllocatorT, typename Enable> class buffer;
+class queue;
+class context;
+} // namespace cl
+} // namespace sycl
+
 // FIXME: namespace scheme for backends?
 namespace cv {
 namespace gimpl {
@@ -32,10 +41,6 @@ namespace sycl
 * @sa gapi_std_backends
 */
 GAPI_EXPORTS cv::gapi::GBackend backend();
-
-template <typename T, typename U> class buffer;
-class queue;
-class context;
 /** @} */
 } // namespace sycl
 } // namespace gapi
@@ -46,17 +51,19 @@ class context;
 class GAPI_EXPORTS GSYCLContext
 {
 public:
-    GSYCLContext();
+    GSYCLContext(cl::sycl::queue&);
 
-    queue& getQueue();
+    cl::sycl::queue& getQueue();
 
     // Generic accessor API
     template<typename T>
     const T& inArg(int input) { return m_args.at(input).get<T>(); }
 
     // Syntax sugar
-    const buffer<uint8_t, 2>& inMat(int input);
-    buffer<uint8_t, 2>& outMatR(int output);
+    template<typename T, int Dimensions, typename AllocatorT, typename Enable>
+    const cl::sycl::buffer<T, Dimensions, AllocatorT, Enable>& inMat(int input);
+    template<typename T, int Dimensions, typename AllocatorT, typename Enable>
+    cl::sycl::buffer<T, Dimensions, AllocatorT, Enable>& outMatR(int output);
 
     const cv::Scalar& inVal(int input);
     cv::Scalar& outValR(int output); // FIXME: Avoid cv::Scalar s = stx.outValR()
@@ -72,8 +79,7 @@ public:
 protected:
     // SYCL specific values
     // TODO: Determine when these get assigned
-    queue& m_queue;
-    context& m_context;
+    cl::sycl::queue& m_queue;
 
     void initSYCLContext();
 
@@ -108,7 +114,8 @@ namespace detail
     template<class T> struct sycl_get_in;
     template<> struct sycl_get_in<cv::GMat>
     {
-        static const buffer<uint8_t, 2> get(GSYCLContext& ctx, int idx)
+        template<typename T, int Dimensions, typename AllocatorT, typename Enable>
+        static const cl::sycl::buffer<T, Dimensions, AllocatorT, Enable> get(GSYCLContext& ctx, int idx)
         {
              return ctx.inMat(idx);
         }
@@ -122,7 +129,8 @@ namespace detail
     template<class T> struct sycl_get_out;
     template<> struct sycl_get_out<cv::GMat>
     {
-        static const buffer<uint8_t, 2> get(GSYCLContext& ctx, int idx)
+        template<typename T, int Dimensions, typename AllocatorT, typename Enable>
+        static const cl::sycl::buffer<T, Dimensions, AllocatorT, Enable> get(GSYCLContext& ctx, int idx)
         {
             return ctx.outMatR(idx);
         }

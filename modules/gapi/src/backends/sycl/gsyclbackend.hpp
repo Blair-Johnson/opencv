@@ -16,6 +16,7 @@
 #include "backends/common/gbackend.hpp"
 #include "compiler/gislandmodel.hpp"
 
+#include <CL/sycl.hpp>
 
 namespace cv { namespace gimpl {
 
@@ -44,6 +45,7 @@ class GSYCLExecutable final: public GIslandExecutable
     // Actual data of all resources in graph (both internal and external)
     Mag m_res;
     GArg packArg(const GArg& arg);
+    sycl::queue m_queue;
 
 public:
     GSYCLExecutable(const ade::Graph  &graph,
@@ -58,6 +60,8 @@ public:
 
     virtual void run(std::vector<InObj> &&input_objs,
                      std::vector<OutObj> &&ouput_objs) override;
+
+    void initSYCLContext();
 };
 }}
 

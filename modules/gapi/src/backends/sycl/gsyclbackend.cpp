@@ -13,6 +13,8 @@
 
 #include <opencv2/core/base.hpp>
 
+#include <opencv2/core/ocl.hpp>
+
 #include "compiler/gobjref.hpp"
 #include "compiler/gmodel.hpp"
 
@@ -127,6 +129,32 @@ cv::GArg cv::gimpl::GSYCLExecutable::packArg(const GArg& arg)
     }
 }
 
+// FIXME: Currently using existing OpenCL interoperability with UMats
+//        instead of pure SYCL
+// FIXME: Add options for controlling device selection
+void cv::gimpl::GSYCLExecutable::initSYCLContext()
+{
+    cl::sycl::default_selector def_selector;
+    m_queue = cl::sycl::queue(def_selector);
+    cl::sycl::context context = m_queue.get_context();
+
+    // bind opencl context, device, queue from SYCL to opencv
+    auto device = m_queue.get_device();
+    auto platform = device.get_platform();
+
+    try
+    {
+        auto ctx = cv::ocl::OpenCLExecutionContext::create(
+            platform.get_info<sycl::info::platform::name>(), platform.get(),
+            context.get(), device.get());
+        ctx.bind();
+    }
+    catch (const cv::Exception& exception)
+    {
+        std::cerr << "OpenCV: Can't bind SYCL OpenCL context/device/queue: " << exception.what() << std::endl;
+    }
+}
+
 void cv::gimpl::GSYCLExecutable::run(std::vector<InObj>&& input_objs,
                                      std::vector<OutObj>&& output_objs)
 {
@@ -146,12 +174,13 @@ void cv::gimpl::GSYCLExecutable::run(std::vector<InObj>&& input_objs,
         auto& mag_mat = m_res.template slot<cv::Mat>()[rc.id];
         CV_CheckTypeEQ(mag_mat.type(), CV_8UC1, "Only single channel UInt8 Mats "
                                     "are currently supported by SYCL");
-        mag_buffer(mag_mat.data, range<2>(mag_mat.rows, mag_mat.cols));
+        sycl::buffer<uint8_t, 2> buff(mag_mat.data, sycl::range<2>(mag_mat.rows, mag_mat.cols));
+        mag_buffer = buff;
     };
 
     for (auto& it : input_objs) {
         const auto& rc = it.first;
-        magazine::bindInArg(m_res, rc, it.second, HandleRMat::SKIP);
+        magazine::bindInArg(m_res, rc, it.second, magazine::HandleRMat::SKIP);
         // There is already a cv::Mat in the magazine after bindInArg call,
         // extract buffer from it and put into magazine
         if (rc.shape == GShape::GMAT) bindBuffer(rc);
@@ -191,7 +220,7 @@ void cv::gimpl::GSYCLExecutable::run(std::vector<InObj>&& input_objs,
 
         // Initialize kernel's execution context:
         // - Input parameters
-        GSYCLContext context;
+        GSYCLContext context(m_queue);
         context.m_args.reserve(op.args.size());
 
         using namespace std::placeholders;
@@ -237,7 +266,7 @@ void cv::gimpl::GSYCLExecutable::run(std::vector<InObj>&& input_objs,
 
     // FIXME: There may be a better place to do this
     // FIXME: Add exception handling for SYCL
-    context.getQueue().wait_and_throw();
+    m_queue.wait_and_throw();
 
     // FIXME: Determine where back conversion from SYCL buffers to Mats occurs
     for (auto& it : output_objs)
