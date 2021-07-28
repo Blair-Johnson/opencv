@@ -63,7 +63,89 @@ public:
 
     void initSYCLContext();
 };
-}}
+
+struct GAPI_EXPORTS SYCLBufferDesc
+    {
+        int depth;
+        int chan;
+        cv::Size size;
+        bool planar;
+    };
+
+template <typename T, int Dimensions, typename AllocatorT, typename Enable>
+SYCLBufferDesc getSYCLBufferDesc(sycl::buffer<T, Dimensions, AllocatorT, Enable>& buffer)
+    {
+        SYCLBufferDesc desc;
+        desc.depth = sizeof(T)*8; // size in bits
+        desc.chan = buffer.get_range().get(2); // assume channel dim is third
+        desc.size = cv::Size(buffer.get_range().get(0), buffer.get_range().get(1));
+        if (desc.chan == 1)
+        {
+            desc.planar = true;
+        }
+        else
+        {
+            desc.planar = false;
+        }
+        return desc;
+    };
+
+cv::GMatDesc getGMatDescFromSYCLDesc(SYCLBufferDesc& desc)
+    {
+        return cv::GMatDesc(desc.depth, desc.chan, desc.size, desc.planar);
+    };
+
+struct GAPI_EXPORTS RMatSYCLBufferAdapter final: public cv::RMat::Adapter
+    {
+        using MapDescF = std::function<getGMatDescFromSYCLDesc(SYCLBufferDesc&)>;
+        //using MapDataF = std::function<cv::Mat(const
+
+        template <typename T, int Dimensions, typename AllocatorT, typename Enable>
+        RMatSYCLBufferAdapter(const sycl::buffer<T, Dimensions, AllocatorT, Enable>& buffer,
+                              const MapDescF& bufferDescToMatDesc,
+                              const MapDataF& bufferViewToMat):
+          m_buffer(buffer),
+          m_bufferDesc(getSYCLBufferDesc(buffer)),
+          m_bufferDescToMatDesc(buffer),
+          //m_bufferViewToMat(bufferViewToMat)
+        { }
+
+        virtual cv::RMat::View access(cv::RMat::Access a) override
+        {
+            auto rmatToSYCLAccess = [](cv::RMat::Access rmatAccess){
+                switch(rmatAccess) {
+                    case cv::RMat::Access::R:
+                        return // sycl access modes?
+                    case cv::RMat::Access::W:
+                        return // sycl access modes?
+                    default:
+                        cv::util::throw_error(std::logic_error(""));
+                }
+            }
+
+            auto fv = m_buffer.access(rmatToSYCLAccess(a));
+
+            auto fvHolder = std::make_shared<>(std::move(fv));
+            auto callback = [fvHolder]() mutable { fvHolder.reset(); };
+
+            return asView(m_bufferViewToMat(m_frame.desc(), *fvHolder), callback);
+        }
+
+        virtual cv::GMatDesc desc() const override
+        {
+            return m_bufferDescToMatDesc(m_bufferDesc);
+        }
+
+        template <typename T, int Dimensions, typename AllocatorT, typename Enable>
+        sycl::buffer<T, Dimensions, AllocatorT, Enable> m_buffer;
+        SYCLBufferDesc m_bufferDesc;
+        MapDescF m_bufferDescToMatDesc;
+        MapDataF m_bufferViewToMat;
+    };
+} // namespace gimpl
+} // namespace cv
+
+
 
 #endif // OPENCV_GAPI_GSYCLBACKEND_HPP
 
