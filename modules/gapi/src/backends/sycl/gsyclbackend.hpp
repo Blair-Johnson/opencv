@@ -110,20 +110,23 @@ struct GAPI_EXPORTS RMatSYCLBufferAdapter final: public cv::RMat::Adapter
           //m_bufferViewToMat(bufferViewToMat)
         { }
 
-        virtual cv::RMat::View access(cv::RMat::Access a) override
+        virtual cv::RMat::View access(cv::RMat::Access a, sycl::queue& queue) override
         {
+            template <typename T, typename H>
             auto rmatToSYCLAccess = [](cv::RMat::Access rmatAccess){
                 switch(rmatAccess) {
                     case cv::RMat::Access::R:
-                        return // sycl access modes?
+                        return std::function<sycl::host_accessor{T&}>;
                     case cv::RMat::Access::W:
-                        return // sycl access modes?
+                        return std::function<sycl::accessor(T, H)>;
                     default:
-                        cv::util::throw_error(std::logic_error(""));
+                        cv::util::throw_error(std::logic_error("Only cv::RMat::Access::R"
+                              " or cv::RMat::Access::W can be mapped to sycl::accessors"));
                 }
             }
 
-            auto fv = m_buffer.access(rmatToSYCLAccess(a));
+            // FIXME: Need to think though how to accomplish this
+            auto fv = rmatToSYCLAccess(a)(m_buffer); // create accessor or host accessor
 
             auto fvHolder = std::make_shared<>(std::move(fv));
             auto callback = [fvHolder]() mutable { fvHolder.reset(); };
