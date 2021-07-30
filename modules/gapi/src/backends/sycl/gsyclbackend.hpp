@@ -98,52 +98,54 @@ cv::GMatDesc getGMatDescFromSYCLDesc(SYCLBufferDesc& desc)
 struct GAPI_EXPORTS RMatSYCLBufferAdapter final: public cv::RMat::Adapter
     {
         using MapDescF = std::function<getGMatDescFromSYCLDesc(SYCLBufferDesc&)>;
-        //using MapDataF = std::function<cv::Mat(const
 
         template <typename T, int Dimensions, typename AllocatorT, typename Enable>
         RMatSYCLBufferAdapter(const sycl::buffer<T, Dimensions, AllocatorT, Enable>& buffer,
-                              const MapDescF& bufferDescToMatDesc,
-                              const MapDataF& bufferViewToMat):
+                              const MapDescF& bufferDescToGMatDesc):
           m_buffer(buffer),
           m_bufferDesc(getSYCLBufferDesc(buffer)),
-          m_bufferDescToMatDesc(buffer),
-          //m_bufferViewToMat(bufferViewToMat)
+          m_bufferDescToGMatDesc(buffer),
         { }
 
-        virtual cv::RMat::View access(cv::RMat::Access a, sycl::queue& queue) override
+        virtual cv::RMat::View access(cv::RMat::Access a) override
         {
-            template <typename T, typename H>
+            // Map RMat access flag to sycl access mode Tag
             auto rmatToSYCLAccess = [](cv::RMat::Access rmatAccess){
                 switch(rmatAccess) {
                     case cv::RMat::Access::R:
-                        return std::function<sycl::host_accessor{T&}>;
+                        return sycl::access_mode::read;
                     case cv::RMat::Access::W:
-                        return std::function<sycl::accessor(T, H)>;
+                        return sycl::access_mode::write;
+                    //case cv::RMat::Access::RW:
+                    //    return sycl::access_mode::read_write;
+                    //    not supported by RMat currently
                     default:
                         cv::util::throw_error(std::logic_error("Only cv::RMat::Access::R"
                               " or cv::RMat::Access::W can be mapped to sycl::accessors"));
                 }
             }
 
-            // FIXME: Need to think though how to accomplish this
-            auto fv = rmatToSYCLAccess(a)(m_buffer); // create accessor or host accessor
+            // Make sycl host accessor with buffer reference and sycl access flag
+            sycl::host_accessor syclHostAccessor(m_buffer, rmatToSYCLAccess(a));
+            // create shared ptr to sycl host accessor
+            auto syclSharedAccessor = std::make_shared<sycl::host_accessor>(syclHostAccessor);
+            // create callback function to trigger accessor destructor on RMat::View destruction
+            auto callback = [syclSharedAccessor]{ syclSharedAccessor.reset(); };
 
-            auto fvHolder = std::make_shared<>(std::move(fv));
-            auto callback = [fvHolder]() mutable { fvHolder.reset(); };
-
-            return asView(m_bufferViewToMat(m_frame.desc(), *fvHolder), callback);
+            // FIXME: Figure out how to map sycl buffer metadata to cv types
+            return asView(cv::Mat(m_bufferDesc.size, cvType,
+                          syclHostAccessor.get_pointer()),  callback);
         }
 
         virtual cv::GMatDesc desc() const override
         {
-            return m_bufferDescToMatDesc(m_bufferDesc);
+            return m_bufferDescToGMatDesc(m_bufferDesc);
         }
 
         template <typename T, int Dimensions, typename AllocatorT, typename Enable>
-        sycl::buffer<T, Dimensions, AllocatorT, Enable> m_buffer;
+        sycl::buffer<T, Dimensions, AllocatorT, Enable>& m_buffer;
         SYCLBufferDesc m_bufferDesc;
         MapDescF m_bufferDescToMatDesc;
-        MapDataF m_bufferViewToMat;
     };
 } // namespace gimpl
 } // namespace cv
