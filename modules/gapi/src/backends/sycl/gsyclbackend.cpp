@@ -119,7 +119,14 @@ cv::GArg cv::gimpl::GSYCLExecutable::packArg(const GArg& arg)
     const cv::gimpl::RcDesc& ref = arg.get<cv::gimpl::RcDesc>();
     switch (ref.shape)
     {
-    case GShape::GMAT: return GArg(m_res.slot<sycl::buffer<uint8_t, 2>>()[ref.id]);
+    case GShape::GMAT:
+    {
+      //return GArg(m_res.slot<sycl::buffer<uint8_t, 2>>()[ref.id]);
+      auto& buffer_map = m_res.slot<sycl::buffer<uint8_t, 2>>();
+      auto it = buffer_map.find(ref.id);
+      GAPI_Assert(it != buffer_map.end());
+      return GArg(it->second);
+    }
     case GShape::GSCALAR: return GArg(m_res.slot<cv::Scalar>()[ref.id]);
     case GShape::GARRAY: return GArg(m_res.slot<cv::detail::VectorRef>().at(ref.id));
     case GShape::GOPAQUE: return GArg(m_res.slot<cv::detail::OpaqueRef>().at(ref.id));
@@ -168,12 +175,11 @@ void cv::gimpl::GSYCLExecutable::run(std::vector<InObj>&& input_objs,
     // }
 
     const auto bindBuffer = [this](const RcDesc& rc)
-    {   // FIXME: This is likely a broken implementation. Figure out how to perform
-        //        type and dimension matching automatically
+    {   // FIXME: This needs to be reorganized to incorporate proper RMat usage
         auto& mag_buffer = m_res.template slot<sycl::buffer<uint8_t, 2>>()[rc.id];
         auto& mag_mat = m_res.template slot<cv::Mat>()[rc.id];
-        CV_CheckTypeEQ(mag_mat.type(), CV_8UC1, "Only single channel UInt8 Mats "
-                                    "are currently supported by SYCL");
+        //CV_CheckTypeEQ(mag_mat.type(), CV_8UC1, "Only single channel UInt8 Mats "
+        //                            "are currently supported by SYCL");
         sycl::buffer<uint8_t, 2> buff(mag_mat.data, sycl::range<2>(mag_mat.rows, mag_mat.cols));
         mag_buffer = buff;
     };
