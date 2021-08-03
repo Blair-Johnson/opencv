@@ -95,16 +95,16 @@ cv::GMatDesc getGMatDescFromSYCLDesc(SYCLBufferDesc& desc)
         return cv::GMatDesc(desc.depth, desc.chan, desc.size, desc.planar);
     };
 
+template <typename T, int Dimensions, typename AllocatorT, typename Enable>
 struct GAPI_EXPORTS RMatSYCLBufferAdapter final: public cv::RMat::Adapter
     {
-        using MapDescF = std::function<getGMatDescFromSYCLDesc(SYCLBufferDesc&)>;
+        using ReMapDescF = std::function<cv::GMatDesc(const SYCLBufferDesc&)>;
 
-        template <typename T, int Dimensions, typename AllocatorT, typename Enable>
         RMatSYCLBufferAdapter(const sycl::buffer<T, Dimensions, AllocatorT, Enable>& buffer,
-                              const MapDescF& bufferDescToGMatDesc):
+                              const ReMapDescF& bufferDescToGMatDesc):
           m_buffer(buffer),
           m_bufferDesc(getSYCLBufferDesc(buffer)),
-          m_bufferDescToGMatDesc(buffer),
+          m_bufferDescToGMatDesc(bufferDescToGMatDesc)
         { }
 
         virtual cv::RMat::View access(cv::RMat::Access a) override
@@ -123,7 +123,7 @@ struct GAPI_EXPORTS RMatSYCLBufferAdapter final: public cv::RMat::Adapter
                         cv::util::throw_error(std::logic_error("Only cv::RMat::Access::R"
                               " or cv::RMat::Access::W can be mapped to sycl::accessors"));
                 }
-            }
+            };
 
             // Make sycl host accessor with buffer reference and sycl access flag
             sycl::host_accessor syclHostAccessor(m_buffer, rmatToSYCLAccess(a));
@@ -142,10 +142,9 @@ struct GAPI_EXPORTS RMatSYCLBufferAdapter final: public cv::RMat::Adapter
             return m_bufferDescToGMatDesc(m_bufferDesc);
         }
 
-        template <typename T, int Dimensions, typename AllocatorT, typename Enable>
         sycl::buffer<T, Dimensions, AllocatorT, Enable>& m_buffer;
         SYCLBufferDesc m_bufferDesc;
-        MapDescF m_bufferDescToMatDesc;
+        ReMapDescF m_bufferDescToGMatDesc;
     };
 } // namespace gimpl
 } // namespace cv
