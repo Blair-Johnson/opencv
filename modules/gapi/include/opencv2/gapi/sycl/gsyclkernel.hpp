@@ -117,7 +117,7 @@ namespace detail
         template<typename T, int Dimensions, typename AllocatorT, typename Enable>
         static const cl::sycl::buffer<T, Dimensions, AllocatorT, Enable> get(GSYCLContext& ctx, int idx)
         {
-             return ctx.inMat(idx);
+             return ctx.inMat<T, Dimensions, AllocatorT, Enable>(idx);
         }
     };
 
@@ -132,7 +132,7 @@ namespace detail
         template<typename T, int Dimensions, typename AllocatorT, typename Enable>
         static const cl::sycl::buffer<T, Dimensions, AllocatorT, Enable> get(GSYCLContext& ctx, int idx)
         {
-            return ctx.outMatR(idx);
+            return ctx.outMatR<T, Dimensions, AllocatorT, Enable>(idx);
         }
     };
 
