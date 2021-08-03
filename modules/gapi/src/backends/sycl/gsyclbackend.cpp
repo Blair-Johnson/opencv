@@ -87,7 +87,9 @@ cv::gimpl::GSYCLExecutable::GSYCLExecutable(const ade::Graph &g,
         if (desc.storage == Data::Storage::INTERNAL && desc.shape == GShape::GMAT)
         {
           const auto mat_desc = util::get<cv::GMatDesc>(desc.meta);
-          //auto& mat = m_res.slot<cv::Mat>()[desc.rc];
+          auto& rmat = m_res.slot<cv::RMat>()[desc.rc];
+          // FIXME: Need to figure out correct RMat construction here
+          rmat = cv::make_rmat<cv::gimpl::RMatSYCLBufferAdapter>(mat holding sycl buffer?);
           //createMat(mat_desc, mat);
         }
         break;
