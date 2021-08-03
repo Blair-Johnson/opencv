@@ -64,6 +64,32 @@ public:
     void initSYCLContext();
 };
 
+template <typename T>
+int syclTypeToMatType()
+    {
+        if (std::is_same<T, unsigned char>::value){
+            return CV_8U;
+        }
+        else if (std::is_same<T, signed char>::value){
+            return CV_8S;
+        }
+        else if (std::is_same<T, unsigned int>::value){
+            return CV_16U;
+        }
+        else if (std::is_same<T, int>::value){
+            return CV_16S;
+        }
+        else if (std::is_same<T, long int>::value){
+            return CV_32S;
+        }
+        else if (std::is_same<T, float>::value){
+            return CV_32F;
+        }
+        else if (std::is_same<T, double>::value){
+            return CV_64F;
+        }
+    };
+
 struct GAPI_EXPORTS SYCLBufferDesc
     {
         int depth;
@@ -133,7 +159,7 @@ struct GAPI_EXPORTS RMatSYCLBufferAdapter final: public cv::RMat::Adapter
             auto callback = [syclSharedAccessor]{ syclSharedAccessor.reset(); };
 
             // FIXME: Figure out how to map sycl buffer metadata to cv types
-            return asView(cv::Mat(m_bufferDesc.size, cvType,
+            return asView(cv::Mat(m_bufferDesc.size, syclTypeToMatType<T>(),
                           syclHostAccessor.get_pointer()),  callback);
         }
 
