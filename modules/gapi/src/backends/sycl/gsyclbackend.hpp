@@ -124,13 +124,13 @@ cv::GMatDesc getGMatDescFromSYCLDesc(SYCLBufferDesc& desc)
 template <typename T, int Dimensions, typename AllocatorT, typename Enable>
 struct GAPI_EXPORTS RMatSYCLBufferAdapter final: public cv::RMat::Adapter
     {
-        using ReMapDescF = std::function<cv::GMatDesc(const SYCLBufferDesc&)>;
+        // using ReMapDescF = std::function<cv::GMatDesc(const SYCLBufferDesc&)>;
 
-        RMatSYCLBufferAdapter(const sycl::buffer<T, Dimensions, AllocatorT, Enable>& buffer,
-                              const ReMapDescF& bufferDescToGMatDesc):
+        RMatSYCLBufferAdapter(const sycl::buffer<T, Dimensions, AllocatorT, Enable>& buffer):
+                              // const ReMapDescF& bufferDescToGMatDesc):
           m_buffer(buffer),
-          m_bufferDesc(getSYCLBufferDesc(buffer)),
-          m_bufferDescToGMatDesc(bufferDescToGMatDesc)
+          m_bufferDesc(getSYCLBufferDesc(buffer))
+          // m_bufferDescToGMatDesc(bufferDescToGMatDesc)
         { }
 
         virtual cv::RMat::View access(cv::RMat::Access a) override
@@ -165,12 +165,13 @@ struct GAPI_EXPORTS RMatSYCLBufferAdapter final: public cv::RMat::Adapter
 
         virtual cv::GMatDesc desc() const override
         {
-            return m_bufferDescToGMatDesc(m_bufferDesc);
+            return getGMatDescFromSYCLDesc(m_bufferDesc);
+            // return m_bufferDescToGMatDesc(m_bufferDesc);
         }
 
         sycl::buffer<T, Dimensions, AllocatorT, Enable>& m_buffer;
         SYCLBufferDesc m_bufferDesc;
-        ReMapDescF m_bufferDescToGMatDesc;
+        // ReMapDescF m_bufferDescToGMatDesc;
     };
 } // namespace gimpl
 } // namespace cv

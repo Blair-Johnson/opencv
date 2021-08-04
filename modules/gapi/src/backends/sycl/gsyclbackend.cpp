@@ -88,9 +88,11 @@ cv::gimpl::GSYCLExecutable::GSYCLExecutable(const ade::Graph &g,
         {
           const auto mat_desc = util::get<cv::GMatDesc>(desc.meta);
           auto& rmat = m_res.slot<cv::RMat>()[desc.rc];
-          // FIXME: Need to figure out correct RMat construction here
-          rmat = cv::make_rmat<cv::gimpl::RMatSYCLBufferAdapter>(mat holding sycl buffer?);
-          //createMat(mat_desc, mat);
+          //FIXME: Need to figure out correct RMat construction here
+          //auto buff_desc = bufferDescFromGMatDesc(mat_desc);
+          //sycl::buffer newbuff<buff_desc.T, buff_desc.D, buff_desc.A, buff_desc.E);
+          //rmat = cv::make_rmat<cv::gimpl::RMatSYCLBufferAdapter<buff_desc.T,
+          //                      buff_desc.D, buff_desc.A, buff_desc.E>>(newbuff);
         }
         break;
       }
