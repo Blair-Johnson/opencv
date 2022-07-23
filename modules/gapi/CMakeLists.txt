@@ -28,6 +28,17 @@ ocv_add_module(gapi
       python
 )
 
+if(WITH_SYCL)
+  set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
+  find_package(SYCL REQUIRED)
+  if(SYCL_FOUND)
+    set(HAVE_SYCL TRUE)
+    set(CMAKE_CXX_COMPILER ${SYCL_COMPILER})
+    set(CMAKE_CXX_STANDARD 17)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+  endif()
+endif()
+
 if(MSVC)
   # Disable obsollete warning C4503 popping up on MSVC <<2017
   # https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-1-c4503?view=vs-2019
@@ -51,6 +62,7 @@ file(GLOB gapi_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/render/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/s11n/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/streaming/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/sycl/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/plaidml/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/util/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/python/*.hpp"
@@ -147,6 +159,11 @@ set(gapi_srcs
     src/backends/plaidml/gplaidmlcore.cpp
     src/backends/plaidml/gplaidmlbackend.cpp
 
+    #SYCL Backend
+    src/backends/sycl/gsyclbackend.cpp
+    src/backends/sycl/gsyclkernel.cpp
+    src/backends/sycl/gsyclcore.cpp
+
     # Common backend code
     src/backends/common/gmetabackend.cpp
     src/backends/common/gcompoundbackend.cpp
@@ -188,6 +205,17 @@ endif()
 
 if(HAVE_TBB)
   ocv_target_link_libraries(${the_module} PRIVATE tbb)
+endif()
+
+if(HAVE_SYCL)
+  target_compile_options(${the_module} PRIVATE ${SYCL_FLAGS} -fsycl-unnamed-lambda)
+  ocv_target_compile_definitions(${the_module} PRIVATE -DHAVE_SYCL)
+  if(TARGET opencv_test_gapi)
+    target_compile_options(opencv_test_api PRIVATE ${SYCL_FLAGS} -fsycl-unnamed-lambda)
+    ocv_target_compile_definitions(opencv_test_gapi PRIVATE -DHAVE_SYCL)
+  endif()
+  target_link_options(${the_module} PRIVATE ${SYCL_FLAGS})
+  ocv_target_link_libraries(${the_module} PRIVATE ${SYCL_LIBRARY})
 endif()
 
 # TODO: Consider support of ITT in G-API standalone mode.
@@ -233,7 +261,6 @@ if(HAVE_PLAIDML)
   ocv_target_link_libraries(${the_module} PRIVATE ${PLAIDML_LIBRARIES})
   ocv_target_include_directories(${the_module} SYSTEM PRIVATE ${PLAIDML_INCLUDE_DIRS})
 endif()
-
 
 if(WIN32)
   # Required for htonl/ntohl on Windows

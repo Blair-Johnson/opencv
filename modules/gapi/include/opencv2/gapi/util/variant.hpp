@@ -25,8 +25,10 @@ namespace util
         template<std::size_t I, typename Target, typename First, typename... Remaining>
         struct type_list_index_helper
         {
-            static const constexpr bool is_same = std::is_same<Target, First>::value;
-            static const constexpr std::size_t value =
+            // constexpr removed for C++17 compatibility (SYCL compiler)
+            static const bool is_same = std::is_same<Target, First>::value;
+            // constexpr removed for C++17 compatibility (SYCL compiler)
+            static const std::size_t value =
                 std::conditional<is_same, std::integral_constant<std::size_t, I>, type_list_index_helper<I + 1, Target, Remaining...>>::type::value;
         };
 
@@ -34,14 +36,16 @@ namespace util
         struct type_list_index_helper<I, Target, First>
         {
             static_assert(std::is_same<Target, First>::value, "Type not found");
-            static const constexpr std::size_t value = I;
+            // constexpr
+            static const std::size_t value = I;
         };
     }
 
     template<typename Target, typename... Types>
     struct type_list_index
     {
-        static const constexpr std::size_t value = detail::type_list_index_helper<0, Target, Types...>::value;
+         // constexpr removed for C++17 compatibility (SYCL compiler)
+         static const std::size_t value = detail::type_list_index_helper<0, Target, Types...>::value;
     };
 
     class bad_variant_access: public std::exception
@@ -363,7 +367,8 @@ namespace util
     template<typename T, typename... Types>
     T* get_if(util::variant<Types...>* v) noexcept
     {
-        const constexpr std::size_t t_index =
+        // constexpr removed for C++17 compatibility (SYCL compiler)
+        const std::size_t t_index =
             util::type_list_index<T, Types...>::value;
 
         if (v && v->index() == t_index)
